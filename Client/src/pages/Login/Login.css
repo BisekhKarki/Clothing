@@ -1,0 +1,87 @@
+.loginNav{
+    background-color: black;
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.homeButton{
+    cursor: pointer;
+    background-color: white;
+    color: black;
+    padding: 5px 12px;
+    border-radius: 10px;
+    border: none;
+}
+
+.homeButton:hover{
+    background-color: rgb(219, 217, 217);
+}
+
+.loginForm {
+    background-color: rgb(222, 220, 220);
+    width: 35%;
+    padding: 60px 100px;
+    gap: 10px;
+    display:flex;
+    flex-direction: column;
+    gap: 10px;
+    position: relative;
+    left: 35%;
+    top: 50px;
+    border-radius: 10px;
+    box-shadow: 0px 2px 10px rgba(50,50,50,0.3);
+    transition: all 0.6s ease;
+}
+
+.loginForm:hover{
+    cursor: pointer;
+    transform: translateY(-5px);
+    box-shadow: 0px 2px 10px rgba(50,50,50,0.6);
+}
+
+.loginForm  input{
+    width: 90%;
+    padding: 7px 10px;
+    border-radius: 5px;
+    margin-top: 10px;
+}
+.loginForm h1{
+    font-size: 25px;
+    font-weight: bolder;
+}
+
+.loginForm  input:focus{
+    outline: none;
+}
+
+.loginForm span{
+    color: red;
+}
+
+.loginButton{
+    background-color: black;
+    color: white;
+    margin-top: 20px;
+    width: 45%;
+    padding: 5px 20px;
+    border-radius: 20px;
+    border: 1px solid black;
+}
+
+.loginButton:hover{
+    background-color: transparent;
+    color: black;
+}
+
+.toRegister{
+    margin-top: 10px;
+    color: blue;
+   
+}
+.loginUnderLine{
+    border-bottom: 1px solid blue;
+    width: 70%;
+    margin-top: -10px;
+}

@@ -1,0 +1,37 @@
+.slide{
+    position: relative;
+    top: -165px;
+    z-index: -1;
+    transition: all 0.2s ease-in;
+}
+
+
+.slider{
+    width: 100%;
+    height: auto;
+   
+}
+
+.showIndex{
+    
+    font-size: 18px;
+    color: gray;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    gap: 94%;
+    position: relative;
+    top: -560px;
+    text-align: center;
+}
+.indexUnderline{
+    border-bottom: 2px solid gray;
+    position: relative;
+    width: 115%;
+    top: -14px;
+    right: 1px;
+}
+
+.second{
+    margin-top: -160px;
+}
