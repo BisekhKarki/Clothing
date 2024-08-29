@@ -1,0 +1,61 @@
+.accessories{
+    position: absolute;
+    bottom: -320px;
+    left: 37%;
+}
+
+.accessories > p{
+    font-size: 25px;
+    color: white;
+    line-height: 25px;
+}
+
+.accessories > span{
+    font-size: 13px;
+    color: white;
+    border-bottom: 1px solid white;
+    cursor: pointer;
+    font-weight: bold;
+
+}
+
+.men{
+    position: absolute;
+    bottom: -680px;
+    left: 5%;
+}
+.men > p{
+    font-size: 25px;
+    color: white;
+    line-height: 25px;
+}
+
+.men > span{
+    font-size: 13px;
+    color: white;
+    border-bottom: 1px solid white;
+    cursor: pointer;
+    font-weight: bold;
+
+}
+
+.women{
+    position: absolute;
+    bottom: -250px;
+    left: 85%;
+}
+
+.women > p{
+    font-size: 25px;
+    color: white;
+    line-height: 30px;
+}
+
+.women > span{
+    font-size: 13px;
+    color: white;
+    border-bottom: 1px solid white;
+    cursor: pointer;
+    font-weight: bold;
+
+}
