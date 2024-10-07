@@ -39,6 +39,16 @@ import { MdArrowOutward } from "react-icons/md";
 import { DialogClose } from "@radix-ui/react-dialog";
 import Pricing from "./Pricing";
 import { MdArrowDropDown } from "react-icons/md";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+
 
 const formSchema = z.object({
   email: z.string().optional(),
@@ -238,6 +248,7 @@ async function onSubmit(values: z.infer<typeof formSchema>) {
                     <FormLabel className="text-lg font-bold">Enter the user email</FormLabel>
                     <FormControl>
                       <Input
+                      type="email"
                         placeholder="User email"
                         {...field}
                         className="bg-black border-[#807f7f] text-[#fff]"
@@ -247,21 +258,19 @@ async function onSubmit(values: z.infer<typeof formSchema>) {
                   </FormItem>
                 )}
               />
-              <label>{role}</label>
-              <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-                <Button className="ml-5"><MdArrowDropDown /></Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56 left-4" defaultValue={role}>
-                <DropdownMenuLabel>Select Role</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuRadioGroup value={role} onValueChange={setRole}>
-                <DropdownMenuRadioItem value="Read" >Read</DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="Write">Write</DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="Admin">Admin</DropdownMenuRadioItem>
-                </DropdownMenuRadioGroup>
-            </DropdownMenuContent>
-            </DropdownMenu>
+              <Select onValueChange={(value) => setRole(value)}>
+                  <SelectTrigger className="w-full text-black">
+                    <SelectValue placeholder={role} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectLabel>Select a Role</SelectLabel>
+                      <SelectItem value="READ">Read</SelectItem>
+                      <SelectItem value="WRITE">Write</SelectItem>
+                      <SelectItem value="ADMIN">Admin</SelectItem>
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
               <div className="flex gap-2">
                 <DialogClose className="w-1/2 border rounded text-lg">
                   Cancel
