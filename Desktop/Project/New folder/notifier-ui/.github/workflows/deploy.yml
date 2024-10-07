@@ -1,0 +1,154 @@
+name: Push to Amazon ECR and Deploy to Development Server
+
+on:
+  push:
+    branches: ["main"]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [22.4.x]
+    steps:
+      - uses: actions/checkout@v3
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: "npm"
+      - run: npm install
+      # - run: npm test
+      - run: npm run build
+
+  push-image:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "22.x"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.AWS_DEFAULT_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Run semantic-release
+        id: semantic-release
+        run: |
+          VERSION=$(npx semantic-release | grep -Eo 'Created tag v[0-9]+\.[0-9]+\.[0-9]+' | grep -Eo 'v[0-9]+\.[0-9]+\.[0-9]+')
+          echo "RELEASE_VERSION=$VERSION" >> $GITHUB_ENV
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build, tag, and push image to Amazon ECR
+        id: build-image
+        env:
+          IMAGE_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ env.RELEASE_VERSION }}
+        run: |
+          echo "NEXT_PUBLIC_BASE_URL=${{ vars.NEXT_PUBLIC_BASE_URL }}" >> .env
+          echo "NEXT_PUBLIC_COSMOS_API_SLUG=${{ vars.NEXT_PUBLIC_COSMOS_API_SLUG }}" >> .env
+          echo "NEXT_PUBLIC_RECAPTCHA_SITE_KEY=${{ vars.NEXT_PUBLIC_RECAPTCHA_SITE_KEY }}" >> .env
+          echo "NEXT_PUBLIC_MEASUREMENT_ID =${{ vars.NEXT_PUBLIC_MEASUREMENT_ID }}" >> .env
+          echo "NEXT_PUBLIC_CANONICAL_URL=${{ vars.NEXT_PUBLIC_CANONICAL_URL }}" >> .env
+          docker build -t $IMAGE_REGISTRY/${{ vars.IMAGE_REPOSITORY }}:$IMAGE_TAG .
+          docker push $IMAGE_REGISTRY/${{ vars.IMAGE_REPOSITORY }}:$IMAGE_TAG
+          echo "image=$IMAGE_REGISTRY/${{ vars.IMAGE_REPOSITORY }}:$IMAGE_TAG" >> "$GITHUB_OUTPUT"
+    outputs:
+      registry: ${{ steps.login-ecr.outputs.registry }}
+      version: ${{ env.RELEASE_VERSION }}
+
+  deploy:
+    needs: push-image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create deployment status in_progress
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const deployment = await github.rest.repos.createDeployment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              environment: 'production',
+              ref: '${{ needs.push-image.outputs.version }}',
+              auto_merge: false,
+              required_contexts: [],
+            })
+            core.exportVariable('DEPLOYMENT_ID', deployment.data.id);
+
+      - name: sync code to vps
+        uses: burnett01/rsync-deployments@7.0.1
+        with:
+          switches: -avzr --delete
+          remote_path: /home/ubuntu/notifier-ui/
+          remote_host: ${{ vars.AWS_EC2_HOST }}
+          remote_user: ${{ secrets.AWS_EC2_USERNAME }}
+          remote_key: ${{ secrets.AWS_EC2_SSH }}
+
+      - name: Deploy to development server
+        uses: appleboy/ssh-action@master
+        env:
+          IMAGE_REGISTRY: ${{ needs.push-image.outputs.registry }}
+          IMAGE_REPOSITORY: ${{ vars.IMAGE_REPOSITORY }}
+          IMAGE_TAG: ${{ needs.push-image.outputs.version }}
+          AWS_DEFAULT_REGION: ${{ vars.AWS_DEFAULT_REGION }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        with:
+          host: ${{ vars.AWS_EC2_HOST }}
+          username: ${{ secrets.AWS_EC2_USERNAME }}
+          key: ${{ secrets.AWS_EC2_SSH }}
+          envs: IMAGE_REGISTRY, IMAGE_REPOSITORY, IMAGE_TAG, AWS_DEFAULT_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
+          script: |
+            cd notifier-ui
+
+            if [ ! -f ".env" ]; then
+              touch .env
+            fi
+
+            echo "NEXT_PUBLIC_BASE_URL=${{ vars.NEXT_PUBLIC_BASE_URL }}" > .env
+            echo "NEXT_PUBLIC_COSMOS_API_SLUG=${{ vars.NEXT_PUBLIC_COSMOS_API_SLUG }}" >> .env
+            echo "NEXT_PUBLIC_RECAPTCHA_SITE_KEY=${{ vars.NEXT_PUBLIC_RECAPTCHA_SITE_KEY }}" >> .env
+            echo "NEXT_PUBLIC_MEASUREMENT_ID =${{ vars.NEXT_PUBLIC_MEASUREMENT_ID }}" >> .env
+            echo "NEXT_PUBLIC_CANONICAL_URL=${{ vars.NEXT_PUBLIC_CANONICAL_URL }}" >> .env
+            echo "TUNNEL_TOKEN=${{ secrets.TUNNEL_TOKEN }}" >> .env
+            echo "IMAGE_REGISTRY=$IMAGE_REGISTRY" >> .env
+            echo "IMAGE_REPOSITORY=$IMAGE_REPOSITORY" >> .env
+            echo "AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION" >> .env
+            echo "IMAGE_TAG=$IMAGE_TAG" >> .env
+
+            aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $IMAGE_REGISTRY
+            docker pull "$IMAGE_REGISTRY/$IMAGE_REPOSITORY:$IMAGE_TAG"
+
+            make stop-production
+            make start-production
+
+            docker image prune -a -f
+
+      - name: update deployment status to success
+        uses: actions/github-script@v6
+        with:
+          script: |
+            await github.rest.repos.createDeploymentStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              deployment_id: ${{ env.DEPLOYMENT_ID }},
+              state: 'success',
+              log_url: '${{ github.event.repository.html_url }}/actions/runs/${{ github.run_id }}'
+            })

@@ -1,0 +1,15 @@
+services:
+  notifier-ui:
+    ports:
+      - "3000"
+    image: "${IMAGE_REGISTRY}/${IMAGE_REPOSITORY}:${IMAGE_TAG}"
+    restart: unless-stopped
+
+  cloudfare-tunnel:
+    image: cloudflare/cloudflared
+    command: tunnel run
+    environment:
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN}
+    depends_on:
+      - notifier-ui
+    restart: unless-stopped

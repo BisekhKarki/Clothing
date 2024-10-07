@@ -1,0 +1,6 @@
+services:
+  notifier-ui:
+    build:
+      context: .
+    env_file:
+      - .env
